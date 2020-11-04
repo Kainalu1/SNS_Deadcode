@@ -6,6 +6,14 @@ The binaries in this repo are pre-compiled for a 32 bits Linux system and have b
 
 **WARNING:** The tutorial attacks are only possible when you weaken the default security settings of your system. Please do not try these attacks the system you normally use and reserve them for an experimental system (e.g., Virtual Box image). 
 
+To clone the repository within a Linux environment: 
+
+```bash
+git clone https://gitlab.com/morisset/bof.git
+```
+
+This will create a folder `bob`, which we will use below. 
+
 # Background 
 
 We do not provide in this page a full explanation of how system memory works. However, some important concepts to keep in mind are: 
@@ -13,9 +21,9 @@ We do not provide in this page a full explanation of how system memory works. Ho
 - The memory is organised as a Virtual Memory, with addresses expressed in hexadecimal. All addresses we consider here are virtual. 
 - The virtual memory contains a range of data: instructions coming from the program, control-flow instructions, user data, etc. Although these different types of data are normally separated, the buffer overflow attack aims at breaking the boundaries. 
 
+If you're familiar with this, you can skip directly to the next section. Otherwise, things will hopefully be clearer once we start playing with the actual code. Don't try to understand everything below, just try to focus on the security relevant bits. In many cases, attackers are capable of compromising a system without understanding it fully: they just need to understand how to break it! 
 
-
-For instance, consider the C program below, which corresponds to the file `step1.c` in the repository. This is a very simple (and boring) piece of code:
+ For now, consider the C program below, which corresponds to the file `step1.c` in the folder `bob`. This is a very simple (and boring) piece of code:
 
 - The function `main` takes one argument from the command line (remember that in C, the first argument is always the name of the program itself, so the actual argument is the second argument), call the function `func` with that argument. 
 - The function `func` takes one argument, creates a buffer of 32 bytes, copies the argument in the buffer, and print the content of the buffer. 
@@ -32,7 +40,6 @@ void func(char *s){
   printf("you entered: %s\n", buf);  
 }
 
-
 int main(int argc, char *argv[]){
         if(argc != 2){
                 printf("Usage: %s some_string\n", argv[0]);
@@ -43,19 +50,18 @@ int main(int argc, char *argv[]){
 
         return 0;
 }
-
 ```
 
 
 
-If you compile this program 
+If you run this program (you should be able to run the program directly, don't try to recompile it), you'll get: 
 
 ```bash
 $ ./step1 "hello world"
 you entered: hello world
 ```
 
-
+So far, so good. Let's now look at the actual program. Use the command `objdump -d step1` (the `-d` option indicates that the code should be disassembled). You should a bunch of code, including the two sections below, which correspond to the assembly code of the function `func` and `main` respectively: 
 
 ```assembly
 0804843b <func>:
@@ -102,5 +108,29 @@ you entered: hello world
 
 ```
 
+No need to understand everything, a lot is just core mechanics (and it's not very intuitive!). Basically, in the left column we have the address in the virtual memory, while in the right column, we have the assembly instructions. Let us ignore most of the instructions for the moment, and focus on the following instruction in `main`: 
 
+```assembly
+8048490:       e8 a6 ff ff ff          call   804843b <func>
+```
+
+Think about the way a program executes as having a pointer that just reads instruction, one after the other, starting from the initial one (in the same you would do for a cooking recipe). In the case above, the execution pointer reaches the address `8048490`, it will execute the instruction `call 804843b` (it's actually slightly more complicated than that, but this is a good level of abstraction), which moves the pointer to the address `804843b`, which happens to be the first address of the program corresponding to `func`. The pointer will therefore execute: 
+
+```assembly
+804843b:       55                      push   %ebp
+```
+
+followed by 
+
+```assembly
+804843c:       89 e5                   mov    %esp,%ebp
+```
+
+and so on and so forth. However, when the pointer reaches the last address in `func` (`8048463`), how does it know where to return? If it just tries to execute the next address in virtual memory (`804864`), it would start the function `main` from the beginning, which is not what we want. Instead, we want to go back to the address `8048495`, which is the next address after executing the call to `func`. To keep with the cooking recipe analogy, if you are following a recipe for lasagnas and the recipe book tells you to go to another page for the white sauce recipe, you need to remember where is the lasagna recipe and at this stage you were once you're done with the white sauce. You could do that for instance by using a post-it or simply rely on your memory. 
+
+
+
+It is the same for the computer, it relies on its memory and this is where the stack comes in. 
+
+![Virtual Memory](Virtual Memory.png)
 

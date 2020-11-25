@@ -282,7 +282,7 @@ Without any buffer-overflow, we can see that the return address in the stack is 
 
 How can change the return value to the desired address, rather than `0x41414141`? First, we need to find the correct length of the buffer. If you are an expert in virtual memory, you might be able to compute it directly. Otherwise, you can just try a few values (we at least know it must be more than 32, since that is the size of `buf`). If we try with 40: 
 
-![Demo step2 - 4](/Users/charles/bof/Demo step2 - 4.png)
+![Demo step2 - 4](Demo step2 - 4.png)
 
 We see that we've erased everything up to and including the return address. To check this, we can try a different ending of the input string, using the construct ``r `perl -e 'print "A" x 36 . "BBBB"'` ``, which outputs 36 "A" followed by 4 "B": 
 
@@ -300,14 +300,7 @@ Success, we've managed to get the program to print "you are allowed", even thoug
 
 In the attack against `step2`, we just jumped a few memory addresses in order to bypass the check. We can do much more than that, and in particular, we can reroute the program execution to any function available in the code. For instance, inspect the code for `step3`. I would suggest you start directly from the binary using the command `objdump -d`, which will disassemble the code for you. If you are not really sure, you can also have a look at the source code. Can you get the program to execute the secret code? 
 
-{::comment}
-test
-{:/comment}
-
-
-
-
-
+<!-- The answer is ./step3 `perl -e 'print "A" x 36 . "\xf4\x84\x04\x08"'` -->
 
 
 ## Shell Injection 

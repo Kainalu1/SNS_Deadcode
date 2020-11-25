@@ -1,3 +1,5 @@
+[TOC]
+
 # Introduction
 
 The Buffer-Overflow is perhaps one of the most famous system attacks. The aim of this tutorial is to give some background on what makes this attack possible, then explain the attack, and finally provide some source files and binary examples for you to experiment. 
@@ -159,8 +161,6 @@ In gdb, we are going to use four commands:
 
 * `x/4x $ebp` display the 4 memory words  starting at the Frame Pointer (which is contained in the register `$ebp`). 
 
-
-
 For instance, you can look at the code of the function `func` by typing `disas func` once you are in `gdb`. Let us ignore most the code for now and let us just look at the last two instructions: `leave` is the instruction indicating that we are going to leave the current stack frame and `ret` is the instruction indicating the execution should return to previous frame. How do we know where to return? We can see in the table above the return address is stored in the current stack frame, just above the Frame Pointer. 
 
 ![Demo Stack](Demo Stack.png)
@@ -255,5 +255,62 @@ you are allowed
 
 Can we exploit the Buffer Overflow so that we input a string different from "secret", and yet get the programme to print "you are allowed"? Yes! 
 
-To realise this attack, you need to 
+To realise this attack, you need to look a bit into the assembly code of `main` in `step2`: 
+
+![Demo step2](Demo step2.png)
+
+When the program comes back from executing the function `func`, it comes back at the address `0x0804920f` and executes the following code: 
+
+```assembly
+ 0x0804920f <+52>:    add    $0x4,%esp
+ 0x08049212 <+55>:    mov    %eax,-0x4(%ebp)
+ 0x08049215 <+58>:    cmpl   $0x0,-0x4(%ebp)
+ 0x08049219 <+62>:    jne    0x804922f <main+84>
+```
+
+This roughly corresponds to the part of the code storing the result of `func` into `res`, and doing the test `if (! res)`. The way the C compiler works is that if the test is true (i.e., the string entered is different from "secret"), then the program just goes to the next line and executes the code corresponding to printing "you are denied"; if the test is not true (i.e., the string entered is "secret"), the program jumps to the address  `0x804922f` and executes corresponding to printing "you are allowed". 
+
+In other words, if, when coming back from `func`, we could go to the address `0x804922f` instead of the address `0x0804920f`, we would get "you are allowed", even if the input string is different from "secret". 
+
+To do so, our goal is to modify the return address value to `0x804922f` using the Buffer Overflow. First, let us set up the breakpoint at the end of `func` and inspect the stack around `$ebp`: 
+
+![Demo step2 - 2](Demo step2 - 2.png)
+
+Without any buffer-overflow, we can see that the return address in the stack is indeed `0x0804920f` (remember that the first value is the previous frame pointer). If we create a buffer overflow, the return address is erased, as it was for `step1` above: 
+
+![Demo step2 - 3](Demo step2 - 3.png)
+
+How can change the return value to the desired address, rather than `0x41414141`? First, we need to find the correct length of the buffer. If you are an expert in virtual memory, you might be able to compute it directly. Otherwise, you can just try a few values (we at least know it must be more than 32, since that is the size of `buf`). If we try with 40: 
+
+![Demo step2 - 4](/Users/charles/bof/Demo step2 - 4.png)
+
+We see that we've erased everything up to and including the return address. To check this, we can try a different ending of the input string, using the construct ``r `perl -e 'print "A" x 36 . "BBBB"'` ``, which outputs 36 "A" followed by 4 "B": 
+
+![Demo step2 - 5](Demo step2 - 5.png)
+
+Now, our return address is `0x42424242`. We're getting close, but what we really want is the address `0x804922f` instead. Unfortunately, we can't just write ``r `perl -e 'print "A" x 36 . "0x804922f"'` `` .  Hexadecimal values need to be input slightly differently. In particular, we need to start with the values at the end of the word: ``r `perl -e 'print "A" x 36 . "\x2f\x92\x04\x08"'` ``. You might want to read about big-endian/little-endian if you're interested, but this is not particularly important here! 
+
+![Demo step2 - 6](Demo step2 - 6.png)
+
+Success, we've managed to get the program to print "you are allowed", even though we didn't input the string "secret"! It also works directly from the command-line (no need to use `gdb`), have a go at it!
+
+
+
+## Branching Functions
+
+In the attack against `step2`, we just jumped a few memory addresses in order to bypass the check. We can do much more than that, and in particular, we can reroute the program execution to any function available in the code. For instance, inspect the code for `step3`. I would suggest you start directly from the binary using the command `objdump -d`, which will disassemble the code for you. If you are not really sure, you can also have a look at the source code. Can you get the program to execute the secret code? 
+
+{::comment}
+test
+{:/comment}
+
+
+
+
+
+
+
+## Shell Injection 
+
+
 

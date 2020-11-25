@@ -16,6 +16,8 @@ git clone https://gitlab.com/morisset/bof.git
 
 This will create a folder `bob`, which we will use below. If you already all about virtual memory and gdb, please feel free to skip the Background section and to go straight to [Buffer Overflow](#BufferOverflow). 
 
+**NOTE**: In case you enjoy learning through videos, I recommend the excellent [video tutorial](https://www.youtube.com/watch?v=1S0aBV-Waeo) by Mike Pound. There is a substantial overlap between the content covered in Mike's video and this tutorial. The focus here is more on the understanding and exploiting the binary files provided in the repository. 
+
 # Background 
 
 ## Virtual Memory
@@ -300,10 +302,70 @@ Success, we've managed to get the program to print "you are allowed", even thoug
 
 In the attack against `step2`, we just jumped a few memory addresses in order to bypass the check. We can do much more than that, and in particular, we can reroute the program execution to any function available in the code. For instance, inspect the code for `step3`. I would suggest you start directly from the binary using the command `objdump -d`, which will disassemble the code for you. If you are not really sure, you can also have a look at the source code. Can you get the program to execute the secret code? 
 
+I would encourage to look for the solution first. If you can't get it to work, the solution is in the comment of this post. 
+
 <!-- The answer is ./step3 `perl -e 'print "A" x 36 . "\xf4\x84\x04\x08"'` -->
+
+The last piece of code for branching functions is `step4`. Can you find out how to exploit it? `step4` can be particularly dangerous if it is setup with SETUID (see below for more details on this). 
 
 
 ## Shell Injection 
 
+Up until now, we have always redirected the control flow to code already existing. In practice, it's unlikely a good programmer is going to leave some critical dead code or a way to input some arbitrary commands. The final step we consider in this tutorial is to directly inject code in the stack and to redirect the control flow to this code. 
 
+The basic idea is summarised in the picture below. Instead of filling the buffer with "A", we insert assembly instructions which correspond to the command "/bin/sh". We then need to modify the return address to point to the buffer. To realise this attack, this means we need to know the address of buffer. 
+
+![Demo - Shell Injection](Demo - Shell Injection.png)
+
+
+
+This part of the attack is a bit more technical. The file `src/exploit.c` contains the code allowing to generate the specific input we need to realise this attack. We won't go into the details here, but please have a look if you are interested! 
+
+To do a demonstration of the attack, you first need to run as root the script `setup.sh`. This script: 
+
+- Installs the shell `zsh`, which is less secure than `sh` against privilege-escalation
+- Replaces `/bin/sh` by `/bin/zsh`
+- Disables [address space layout randomization (ASLR)](https://linux-audit.com/linux-aslr-and-kernelrandomize_va_space-setting/), which makes it harder for attacker to guess where information is stored in memory
+- Gives the ownership of the binary `step5` to the root user, with [SETUID](https://www.computerhope.com/jargon/s/setuid.htm) set, meaning that whoever runs `step5` will run this program as root. 
+
+All these steps are essential to be able to realise the shell execution attack. It is important to realise that those steps are effectively lowering the security of your system, so you should only do this on a machine you control and that has no critical data (e.g., a VM specifically designed for security testing).
+
+It is also worth mentioning that `step5` has been compiled with some security features removed, in particular there are no [stack protector](https://en.wikipedia.org/wiki/Stack_buffer_overflow#Stack_canaries) and the stack is made executable (by default it is not). The required options are available in the script `src/compile.sh`. 
+
+So if you run things in order, you should see (the output might be slightly different if zsh is not already installed): 
+
+```bash
+~bof$ sudo sh setup.sh
+[sudo] password for kali: 
+Reading package lists... Done
+Building dependency tree       
+Reading state information... Done
+zsh is already the newest version (5.8-5).
+0 upgraded, 0 newly installed, 0 to remove and 846 not upgraded.
+kernel.randomize_va_space = 0
+
+~/bof$ ./exploit 128 100
+addr: 0xffffd1a4
+
+~/bof$ ./step5 `cat payload`
+# whoami                                                                                       
+root
+#
+```
+
+
+
+Note the argument for the `exploit` script. They should work on your machine, I invite you to have a look at `src/exploit.c` to understand why we need those. After executing the last command, we get a shell with root privileges. Congratulations, you've conducted a privilege escalation using a buffer overflow! 
+
+# To explore further
+
+The binary in this repository are for a 32 bits architecture. The problem is slightly different in a 64 bits architecture, although the overall principle remains the same. There is a very nice blog post from Jon Gjengset on ["Smashing the Stack in the 21st Century"](https://thesquareplanet.com/blog/smashing-the-stack-21st-century/) (see the Credits for the reference in the title). The security research *null byte* also published a nice tutorial about a [Basic Buffer Overflow on 64-bit Architecture](https://medium.com/@buff3r/basic-buffer-overflow-on-64-bit-architecture-3fb74bab3558). 
+
+
+
+
+
+# Credits
+
+The reference work is the article ["Smashing The Stack For Fun and Profit"](https://inst.eecs.berkeley.edu/~cs161/fa08/papers/stack_smashing.pdf), published in 1996 by Aleph One (a.k.a. [Elias Levy](https://en.wikipedia.org/wiki/Elias_Levy)). Buffer overflow attacks were known before, but this was the first clear tutorial. In Newcastle University, Francisco Rocha (then a PhD student in computer security at Newcastle University, currently Security Engineer at Moteefe) did a tremendous job of adapting this tutorial for our students in the MSc in Computer Security and Resilience. Charles Morisset has refined the examples and code over the years, and wrote this repository and tutorial, which can be freely copied and used. Merge requests for improvement and corrections are welcome! 
 

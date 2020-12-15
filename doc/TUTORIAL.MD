@@ -165,9 +165,9 @@ For instance, you can look at the code of the function `func` by typing `disas f
 
 ![Demo Stack](Demo Stack.png)
 
-In the image above, we set a breakpoint just before the instruction `leave` (which is done with the command `break *0x08048462`) and we run the programme with the argument "Hello World" (which is done with the command `r "Hello World"`). When the execution stops, the memory is still in the stack frame for `func`. We can inspect the 4 words starting from the Frame Pointer (which is done with the command  `x/4x $ebp`) and see: `0xffffd238` (which is the value of the previous frame pointer), followed by `0x08048695` (which is the return address), followed by `0xffffd499` and `0x00000000` (let us ignore these two). If you don't see that, make sure you have correctly set up the breakpoint and run the program. 
+In the image above, we set a breakpoint just before the instruction `leave` (which is done with the command `break *0x08048462`) and we run the programme with the argument "Hello World" (which is done with the command `r "Hello World"`). When the execution stops, the memory is still in the stack frame for `func`. We can inspect the 4 words starting from the Frame Pointer (which is done with the command  `x/4x $ebp`) and see: `0xffffd238` (which is the value of the previous frame pointer), followed by `0x08048495` (which is the return address), followed by `0xffffd499` and `0x00000000` (let us ignore these two). If you don't see that, make sure you have correctly set up the breakpoint and run the program. 
 
-What does the return address `0x08048695` correspond to? If you disassemble the function `main`, you can see it corresponds the address immediately after the call to the function `func`: 
+What does the return address `0x08048495` correspond to? If you disassemble the function `main`, you can see it corresponds the address immediately after the call to the function `func`: 
 
 ![Demo Stack 2](Demo Stack 2.png)
 

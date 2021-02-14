@@ -1,6 +1,6 @@
 [TOC]
 
-# Introduction
+# 1. Introduction
 
 The Buffer-Overflow is perhaps one of the most famous system attacks. The aim of this tutorial is to give some background on what makes this attack possible and to explain it on examples provided in the repository. 
 
@@ -18,9 +18,9 @@ This will create a folder `bof`, which we will use below. If you already all abo
 
 **NOTE**: In case you enjoy learning through videos, I recommend the excellent [video tutorial](https://www.youtube.com/watch?v=1S0aBV-Waeo) by Mike Pound. There is a substantial overlap between the content covered in Mike's video and this tutorial. The focus here is more on the understanding and exploiting the binary files provided in the repository. If you access this tutorial though my lectures at Newcastle University, there should also be additional videos in the corresponding Canvas course. 
 
-# Background 
+# 2. Background 
 
-## Virtual Memory
+## 2.1 Virtual Memory
 
 We do not provide in this page a full explanation of how system memory works. However, some important concepts to keep in mind are: 
 
@@ -143,7 +143,7 @@ The stack itself is located in a different part of the memory, and is organised 
 
 When we call `func`, the system creates a new stack frame, stores the previous frame pointer at the address pointed by the Frame Pointer. 
 
-## Using GDB
+## 2.2 Using GDB
 
 Let us examine the stack for the program `step1`. To do this, we use `gdb`, which allows us to debug a program. In the `bof` folder, type: 
 
@@ -173,7 +173,7 @@ What does the return address `0x08048495` correspond to? If you disassemble the 
 
 We can finish the execution of the program with the command `cont`, and the process exits normally, which means all went well. Let us try to break things up now! 
 
-# Buffer Overflow
+# 3. Buffer Overflow
 
 In the previous example, the execution knows where to return to because the return address is stored in memory. However, we can see that it is stored very close to other bits of data, including local variables, which can therefore be modified by the user. This is one of the main vulnerabilities enabling the Buffer Overflow attack: the mix of control flow data (critical) and user input data (not necessarily trusted).
 
@@ -202,7 +202,7 @@ We can see that when we inspect the memory at `$ebp`, all memory seems to be fil
 
 Congratulations, you just did your first Buffer Overflow attack! 
 
-## Control Flow Redirection
+## 3.1 Control Flow Redirection
 
 The attack above leads to crashing `step1` by causing a segmentation fault. Crashing a program can be used if an attacker tries to limit the availability of a system, but it is usually quite limited. However, what if, instead of redirecting the execution to the arbitrary address  `0x41414141`, we could instead redirect it to a memory address we could exploit? 
 
@@ -294,7 +294,7 @@ Now, our return address is `0x42424242` (42 is the ASCII code for "B"). We're ge
 
 Success, we've managed to get the program to print "you are allowed", even though we didn't input the string "secret"! It also works directly from the command-line (no need to use `gdb`), have a go at it!
 
-## Branching Functions
+## 3.2 Branching Functions
 
 In the attack against `step2`, we just jumped a few memory addresses in order to bypass the check. We can do much more than that, and in particular, we can reroute the program execution to any function available in the code. For instance, inspect the code for `step3`. I would suggest you start directly from the binary using the command `objdump -d`, which will disassemble the code for you. If you are not really sure, you can also have a look at the source code. Can you get the program to execute the secret code? 
 
@@ -305,7 +305,7 @@ I would encourage to look for the solution first. If you can't get it to work, t
 The last piece of code for branching functions is `step4`. Can you find out how to exploit it? `step4` can be particularly dangerous if it is setup with SETUID (see below for more details on this). 
 
 
-## Shell Injection 
+## 3.3 Shell Injection 
 
 Up until now, we have always redirected the control flow to code already existing. In practice, it's unlikely a good programmer is going to leave some critical dead code or a way to input some arbitrary commands. The final step we consider in this tutorial is to directly inject code in the stack and to redirect the control flow to this code. 
 
@@ -353,7 +353,7 @@ root
 
 Note the argument for the `exploit` script. They should work on your machine, I invite you to have a look at `src/exploit.c` to understand why we need those. After executing the last command, we get a shell with root privileges. Congratulations, you've conducted a privilege escalation using a buffer overflow! 
 
-# To explore further
+# 4. To explore further
 
 The binary in this repository are for a 32 bits architecture. The problem is slightly different in a 64 bits architecture, although the overall principle remains the same. There is a very nice blog post from Jon Gjengset on ["Smashing the Stack in the 21st Century"](https://thesquareplanet.com/blog/smashing-the-stack-21st-century/) (see the Credits for the reference in the title). The security research *null byte* also published a nice tutorial about a [Basic Buffer Overflow on 64-bit Architecture](https://medium.com/@buff3r/basic-buffer-overflow-on-64-bit-architecture-3fb74bab3558). 
 
@@ -361,7 +361,7 @@ Another interesting aspect is [Return-Oriented Programming](https://codearcana.c
 
 
 
-# Credits
+# 5. Credits
 
 The reference work is the article ["Smashing The Stack For Fun and Profit"](https://inst.eecs.berkeley.edu/~cs161/fa08/papers/stack_smashing.pdf), published in 1996 by Aleph One (a.k.a. [Elias Levy](https://en.wikipedia.org/wiki/Elias_Levy)). Buffer overflow attacks were known before, but this was the first clear tutorial. In Newcastle University, Francisco Rocha (then a PhD student in computer security at Newcastle University, currently Security Engineer at Moteefe) did a tremendous job of adapting this tutorial for our students in the MSc in Computer Security and Resilience. Charles Morisset has refined the examples and code over the years, and wrote this repository and tutorial, which can be freely copied and used. Merge requests for improvement and corrections are welcome! 
 
